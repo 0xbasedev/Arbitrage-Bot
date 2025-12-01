@@ -1,7 +1,6 @@
-//SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.6.12;
-
-pragma experimental ABIEncoderV2;
+// SPDX-License-Identifier: MIT
+// edited by msg.sender
+pragma solidity ^0.8.30;
 
 interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint value);
@@ -24,24 +23,24 @@ interface IWETH is IERC20 {
     function withdraw(uint) external;
 }
 
-// This contract simply calls multiple targets sequentially, ensuring WETH balance before and after
-
+/// @title FlashBots MultiCall Executor
+/// @notice Allows multicalls and secure execution for WETH-based arbitrage strategies
 contract FlashBotsMultiCall {
     address private immutable owner;
     address private immutable executor;
     IWETH private constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     modifier onlyExecutor() {
-        require(msg.sender == executor);
+        require(msg.sender == executor, "Not executor");
         _;
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner);
+        require(msg.sender == owner, "Not owner");
         _;
     }
 
-    constructor(address _executor) public payable {
+    constructor(address _executor) payable {
         owner = msg.sender;
         executor = _executor;
         if (msg.value > 0) {
@@ -49,26 +48,66 @@ contract FlashBotsMultiCall {
         }
     }
 
-    receive() external payable {
-    }
+    receive() external payable {}
 
-    function uniswapWeth(uint256 _wethAmountToFirstMarket, uint256 _ethAmountToCoinbase, address[] memory _targets, bytes[] memory _payloads) external onlyExecutor payable {
-        require (_targets.length == _payloads.length);
+    /// @notice Batch call multiple targets with WETH balance accounting
+    /// @param _wethAmountToFirstMarket Amount of WETH to send to first market
+    /// @param _ethAmountToCoinbase ETH reward for miner (coinbase)
+    /// @param _targets Target contract addresses to call
+    /// @param _payloads Calldata for each target
+    function uniswapWeth(
+        uint256 _wethAmountToFirstMarket,
+        uint256 _ethAmountToCoinbase,
+        address[] calldata _targets,
+        bytes[] calldata _payloads
+    )
+        external
+        onlyExecutor
+        payable
+    {
+        require(_targets.length == _payloads.length, "Targets/payloads mismatch");
         uint256 _wethBalanceBefore = WETH.balanceOf(address(this));
         WETH.transfer(_targets[0], _wethAmountToFirstMarket);
+
         for (uint256 i = 0; i < _targets.length; i++) {
             (bool _success, bytes memory _response) = _targets[i].call(_payloads[i]);
-            require(_success); _response;
+            require(_success, "Call failed");
         }
 
         uint256 _wethBalanceAfter = WETH.balanceOf(address(this));
-        require(_wethBalanceAfter > _wethBalanceBefore + _ethAmountToCoinbase);
+        require(_wethBalanceAfter > _wethBalanceBefore + _ethAmountToCoinbase, "Balance check failed");
+
         if (_ethAmountToCoinbase == 0) return;
 
         uint256 _ethBalance = address(this).balance;
         if (_ethBalance < _ethAmountToCoinbase) {
             WETH.withdraw(_ethAmountToCoinbase - _ethBalance);
         }
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool sent, ) = block.coinbase.call{value: _ethAmountToCoinbase}("");
+        require(sent, "Coinbase payment failed");
+    }
+
+    /// @notice Generic proxy call (owner only)
+    /// @param _to Target address to call
+    /// @param _value ETH value to send
+    /// @param _data Call data
+    function call(
+        address payable _to,
+        uint256 _value,
+        bytes calldata _data
+    )
+        external
+        onlyOwner
+        payable
+        returns (bytes memory)
+    {
+        require(_to != address(0), "Bad target");
+        (bool _success, bytes memory _result) = _to.call{value: _value}(_data);
+        require(_success, "Call failed");
+        return _result;
+    }
+}        }
         block.coinbase.transfer(_ethAmountToCoinbase);
     }
 
