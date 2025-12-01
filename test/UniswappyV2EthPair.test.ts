@@ -1,5 +1,5 @@
 import { UniswappyV2EthPair } from "../src/UniswappyV2EthPair" 
-import { WETH_ADDRESS } from "../src/addresses"
+import { WNATIVE_ADDRESS } from "../src/addresses"
 import { BigNumber } from "ethers";
 import { ETHER } from "../src/utils";
 
@@ -8,21 +8,21 @@ const TOKEN_ADDRESS = "0x000000000000000000000000000000000000000a"
 const PROTOCOL_NAME = "TEST";
 
 describe('UniswappyV2EthPair', function() {
-  let wethPair: UniswappyV2EthPair
+  let wnativePair: UniswappyV2EthPair
   beforeEach(() => {
-    wethPair = new UniswappyV2EthPair(MARKET_ADDRESS, [TOKEN_ADDRESS, WETH_ADDRESS], PROTOCOL_NAME);
-    wethPair.setReservesViaOrderedBalances([ETHER, ETHER.mul(2)])
+    wnativePair = new UniswappyV2EthPair(MARKET_ADDRESS, [TOKEN_ADDRESS, WNATIVE_ADDRESS], PROTOCOL_NAME);
+    wnativePair.setReservesViaOrderedBalances([ETHER, ETHER.mul(2)])
   })
   it('fetch balances by token address', function() {
-    expect(wethPair.getBalance(TOKEN_ADDRESS)).toEqual(ETHER);
-    expect(wethPair.getBalance(WETH_ADDRESS)).toEqual(ETHER.mul(2));
+    expect(wnativePair.getBalance(TOKEN_ADDRESS)).toEqual(ETHER);
+    expect(wnativePair.getBalance(WNATIVE_ADDRESS)).toEqual(ETHER.mul(2));
   });
   it('get token input required for output', function() {
-    expect(wethPair.getTokensIn(TOKEN_ADDRESS, WETH_ADDRESS, ETHER.div(10))).toEqual(BigNumber.from("52789948793749671"));
-    expect(wethPair.getTokensIn(WETH_ADDRESS, TOKEN_ADDRESS, ETHER.div(10))).toEqual(BigNumber.from("222890894906943052"));
+    expect(wnativePair.getTokensIn(TOKEN_ADDRESS, WNATIVE_ADDRESS, ETHER.div(10))).toEqual(BigNumber.from("52789948793749671"));
+    expect(wnativePair.getTokensIn(WNATIVE_ADDRESS, TOKEN_ADDRESS, ETHER.div(10))).toEqual(BigNumber.from("222890894906943052"));
   });
   it('get token output from input', function() {
-    expect(wethPair.getTokensOut(TOKEN_ADDRESS, WETH_ADDRESS, BigNumber.from("52789948793749671"))).toEqual(ETHER.div(10).add(1));
-    expect(wethPair.getTokensOut(WETH_ADDRESS, TOKEN_ADDRESS, BigNumber.from("222890894906943052"))).toEqual(ETHER.div(10));
+    expect(wnativePair.getTokensOut(TOKEN_ADDRESS, WNATIVE_ADDRESS, BigNumber.from("52789948793749671"))).toEqual(ETHER.div(10).add(1));
+    expect(wnativePair.getTokensOut(WNATIVE_ADDRESS, TOKEN_ADDRESS, BigNumber.from("222890894906943052"))).toEqual(ETHER.div(10));
   });
 });
