@@ -67,22 +67,6 @@ contract FlashBotsMultiCall {
         require(sent, "Coinbase payment failed");
     }
 
-    /// @notice Owner utility - proxy call
-    function call(
-        address payable _to,
-        uint256 _value,
-        bytes calldata _data
-    ) external onlyOwner payable returns (bytes memory) {
-        require(_to != address(0), "Bad target");
-        (bool _success, bytes memory _result) = _to.call{value: _value}(_data);
-        require(_success, "Call failed");
-        return _result;
-    }
-}        (bool sent, ) = block.coinbase.call{value: _ethAmountToCoinbase}("");
-        require(sent, "Coinbase payment failed");
-    }
-
-    /// @notice Owner utility - proxy call
     function call(
         address payable _to,
         uint256 _value,
@@ -94,41 +78,3 @@ contract FlashBotsMultiCall {
         return _result;
     }
 }
-        for (uint256 i = 0; i < _targets.length; i++) {
-            (bool _success, bytes memory _response) = _targets[i].call(_payloads[i]);
-            require(_success, "Call failed");
-        }
-
-        uint256 _wethBalanceAfter = WETH.balanceOf(address(this));
-        require(_wethBalanceAfter > _wethBalanceBefore + _ethAmountToCoinbase, "Balance check failed");
-
-        if (_ethAmountToCoinbase == 0) return;
-
-        uint256 _ethBalance = address(this).balance;
-        if (_ethBalance < _ethAmountToCoinbase) {
-            WETH.withdraw(_ethAmountToCoinbase - _ethBalance);
-        }
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool sent, ) = block.coinbase.call{value: _ethAmountToCoinbase}("");
-        require(sent, "Coinbase payment failed");
-    }
-
-    /// @notice Generic proxy call (owner only)
-    /// @param _to Target address to call
-    /// @param _value ETH value to send
-    /// @param _data Call data
-    function call(
-        address payable _to,
-        uint256 _value,
-        bytes calldata _data
-    )
-        external
-        onlyOwner
-        payable
-        returns (bytes memory)
-    {
-        require(_to != address(0), "Bad target");
-        (bool _success, bytes memory _result) = _to.call{value: _value}(_data);
-        require(_success, "Call failed");
-        return _result;
-    }
